@@ -117,7 +117,7 @@
             </div>
         </div>
 
-        <p class="mt-4 text-xs text-gray-600">* Festival dates are only updated through the end of 2026 and normal dates 2035.</p>
+        <p class="mt-4 text-xs text-gray-600">* Festival dates are only updated through the end of 2026.</p>
     </section>
 
     <section id="contact" class="max-w-6xl mx-auto px-4 py-16 border-t">
@@ -157,50 +157,46 @@
         const PROXY_URL = "https://corsproxy.io/?";
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby8Y5GCvJ9b9FiPEFduEvngqyvvcfAa6iaxPzmutZNI2qQx8h2ZitDm2Yhhb63WCbGu/exec"; 
 
-        // Festivals with Haftorah (fallback) 2025–2026 only
+        // Festivals with Haftorah (fallback) 2025–2026 only (your latest list)
         const FESTIVALS_FALLBACK = new Set([
-            // 2025 Shabbos Chanukah
-            "2025-12-13","2025-12-20",
-            // 2026 specials and Yamim Tovim (diaspora)
-            "2026-02-14","2026-02-28","2026-03-14","2026-03-21","2026-03-28",
+            "2025-12-20",
+            "2026-02-14","2026-02-28","2026-03-07","2026-03-14","2026-03-28",
             "2026-04-02","2026-04-03","2026-04-04","2026-04-08","2026-04-09",
             "2026-05-22","2026-05-23",
             "2026-07-18","2026-07-23","2026-07-25",
-            "2026-09-14","2026-09-15","2026-09-19","2026-09-23",
-            "2026-09-28","2026-09-29","2026-10-03","2026-10-05","2026-10-06",
-            "2026-12-12","2026-12-19"
+            "2026-09-12","2026-09-13","2026-09-19","2026-09-21",
+            "2026-09-26","2026-09-27","2026-10-03","2026-10-04",
+            "2026-12-05","2026-12-12"
         ]);
 
         // Haftorah titles for those festival/special dates
         const FESTIVAL_HAFTORAH = {
-            "2025-12-13": "Roni VeSimchi",
-            "2025-12-20": "VaYa’as Chiram",
+            "2025-12-20": "Roni VeSimchi",
             "2026-02-14": "Yehoash Melech Yehudah",
             "2026-02-28": "Pokedti Es Asher Asah Amalek",
-            "2026-03-14": "VeZarakti Aleichem Mayim Tehorim",
-            "2026-03-21": "Ko Amar Hashem Elokim BaRishon",
+            "2026-03-07": "VeZarakti Aleichem Mayim Tehorim",
+            "2026-03-14": "Ko Amar Hashem Elokim BaRishon",
             "2026-03-28": "VeArevah LaHashem",
-            "2026-04-02": "VaYehoshua BaLailah HaHu",
+            "2026-04-02": "VaYehoshua",
             "2026-04-03": "VaYomer Yoshiyahu",
             "2026-04-04": "HaAtzamos HaYevayshos",
             "2026-04-08": "VaYedaber Dovid",
-            "2026-04-09": "Od HaYom BeNov LaAmod",
+            "2026-04-09": "Od HaYom",
             "2026-05-22": "Ma’aseh Merkavah",
             "2026-05-23": "Hashem BeHeichal Kodsho",
             "2026-07-18": "Chazon Yeshayahu",
             "2026-07-23": "Asof Asifeim",
             "2026-07-25": "Nachamu Nachamu Ami",
-            "2026-09-14": "VaYehi HaYom",
-            "2026-09-15": "Ko Amar Hashem Motzo Chen",
+            "2026-09-12": "VaYehi HaYom",
+            "2026-09-13": "Ko Amar Hashem Motzo Chen",
             "2026-09-19": "Shuvah Yisroel",
-            "2026-09-23": "Solu Solu (Shacharis) / Yonah (Mincha)",
-            "2026-09-28": "Hineh Yom Bo LaHashem",
-            "2026-09-29": "VaYikahalu El HaMelech",
-            "2026-10-03": "BaYom Hahu Yihyeh",
-            "2026-10-05": "VaYamod Shlomo",
-            "2026-10-06": "VaYehi Acharei Mos Moshe",
-            "2026-12-12": "Roni VeSimchi",
-            "2026-12-19": "VaYa’as Chiram"
+            "2026-09-21": "Solu Solu (Shacharis) / Yonah (Mincha)",
+            "2026-09-26": "Hineh Yom Bo LaHashem",
+            "2026-09-27": "VaYikahalu El HaMelech",
+            "2026-10-03": "VaYehi KeChalos Shlomo",
+            "2026-10-04": "VaYehi Acharei Mos Moshe",
+            "2026-12-05": "Roni VeSimchi",
+            "2026-12-12": "VaYa’as Chiram"
         };
 
         // Range for Hebcal lookup
@@ -241,7 +237,6 @@
         }
 
         async function fetchHebcalRange(){
-            // diaspora default (no il=on)
             const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&start=${HEB_START}&end=${HEB_END}&maj=on&min=on&mod=on&s=on`;
             const res = await fetch(url);
             const data = await res.json();
@@ -268,7 +263,6 @@
                 .slice(0,8);
         }
 
-        // tiny Levenshtein
         function leven(a,b){
             const al=a.length, bl=b.length;
             if (al===0) return bl; if (bl===0) return al;
