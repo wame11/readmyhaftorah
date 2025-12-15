@@ -157,7 +157,7 @@
         const PROXY_URL = "https://corsproxy.io/?";
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby8Y5GCvJ9b9FiPEFduEvngqyvvcfAa6iaxPzmutZNI2qQx8h2ZitDm2Yhhb63WCbGu/exec"; 
 
-        // Festivals with Haftorah (fallback) 2025–2026 only (your latest list)
+        // Festivals with Haftorah (fallback) 2025–2026
         const FESTIVALS_FALLBACK = new Set([
             "2025-12-20",
             "2026-02-14","2026-02-28","2026-03-07","2026-03-14","2026-03-28",
@@ -169,7 +169,7 @@
             "2026-12-05","2026-12-12"
         ]);
 
-        // Haftorah titles for those festival/special dates
+        // Haftorah titles
         const FESTIVAL_HAFTORAH = {
             "2025-12-20": "Roni VeSimchi",
             "2026-02-14": "Yehoash Melech Yehudah",
@@ -199,6 +199,36 @@
             "2026-12-12": "VaYa’as Chiram"
         };
 
+        // Festival names for display
+        const FESTIVAL_NAME = {
+            "2025-12-20": "Shabbos Chanukah",
+            "2026-02-14": "Shabbos Shekalim",
+            "2026-02-28": "Shabbos Zachor",
+            "2026-03-07": "Shabbos Parah",
+            "2026-03-14": "Shabbos HaChodesh",
+            "2026-03-28": "Shabbos HaGadol",
+            "2026-04-02": "Pesach I",
+            "2026-04-03": "Pesach II",
+            "2026-04-04": "Shabbos Chol HaMoed Pesach",
+            "2026-04-08": "Pesach VII",
+            "2026-04-09": "Pesach VIII",
+            "2026-05-22": "Shavuos I",
+            "2026-05-23": "Shavuos II",
+            "2026-07-18": "Shabbos Chazon",
+            "2026-07-23": "Tishah BeAv",
+            "2026-07-25": "Shabbos Nachamu",
+            "2026-09-12": "Rosh Hashonoh I",
+            "2026-09-13": "Rosh Hashonoh II",
+            "2026-09-19": "Shabbos Shuvah",
+            "2026-09-21": "Yom Kippour",
+            "2026-09-26": "Sukkos I",
+            "2026-09-27": "Sukkos II",
+            "2026-10-03": "Shemini Atzeres",
+            "2026-10-04": "Simchas Torah",
+            "2026-12-05": "Shabbos Chanukah",
+            "2026-12-12": "Shabbos Chanukah"
+        };
+
         // Range for Hebcal lookup
         const HEB_START = "2025-01-01";
         const HEB_END   = "2035-12-31"; 
@@ -207,8 +237,8 @@
         let selected = null;
         let viewDate = new Date();
         let userPhone = localStorage.getItem("haftorahUserPhone") || "";
-        let hefIndex = [];          // parashat entries
-        let festivalSet = new Set(); // holiday dates from Hebcal
+        let hefIndex = [];
+        let festivalSet = new Set();
 
         const grid = document.getElementById("grid");
         const monthLabel = document.getElementById("monthLabel");
@@ -356,9 +386,10 @@
             const iso = formatISO(selected.getUTCFullYear(), selected.getUTCMonth()+1, selected.getUTCDate());
             const nice = selected.toLocaleDateString("en-GB",{timeZone:"Europe/London",weekday:"long",day:"numeric",month:"long",year:"numeric"});
             const haftorah = findHaftorahByDate(iso);
+            const festivalName = FESTIVAL_NAME[iso] || "";
 
             formBox.innerHTML =
-                '<div class="flex itemscenter justify-between gap-3 mb-4">'+
+                '<div class="flex items-center justify-between gap-3 mb-4">'+
                     '<h3 class="text-xl font-semibold">'+nice+'</h3>'+
                     '<button id="changeDate" class="text-sm underline text-indigo-600 hover:text-indigo-700">Change Date</button>'+
                 '</div>'+
@@ -380,7 +411,8 @@
                         '<span id="savedMsg" class="text-sm hidden"></span>'+
                     '</div>'+
                 '</form>'+
-                `<div class="mt-2 text-xs text-gray-600">Haftorah for this date: <strong>${haftorah}</strong></div>`;
+                `<div class="mt-2 text-xs text-gray-600">Haftorah for this date: <strong>${haftorah}</strong></div>`+
+                (festivalName ? `<div class="mt-1 text-xs text-gray-600">Festival: <strong>${festivalName}</strong></div>` : "");
 
             const phoneInput=formBox.querySelector('input[name="phone"]');
             if (phoneInput && userPhone) phoneInput.value=userPhone;
@@ -420,7 +452,7 @@
 
                     msg.textContent="Reserved!";
                     msg.classList.add("text-green-600");
-                    formBox.innerHTML = `<div class="p-6 rounded-xl bg-green-50 text-green-800 text-center">Reservation for <strong>${nice}</strong> saved. Haftorah: <strong>${haftorah}</strong></div>`;
+                    formBox.innerHTML = `<div class="p-6 rounded-xl bg-green-50 text-green-800 text-center">Reservation for <strong>${nice}</strong> saved. Haftorah: <strong>${haftorah}</strong>${festivalName ? `<br>Festival: <strong>${festivalName}</strong>` : ''}</div>`;
                     selected=null;
                     localStorage.removeItem("haftorahBookings");
                     setTimeout(fetchBookings, 800);
