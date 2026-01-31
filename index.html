@@ -10,6 +10,38 @@
     .card { background: rgba(255,255,255,0.85); backdrop-filter: saturate(1.2) blur(2px); -webkit-backdrop-filter: saturate(1.2) blur(2px); }
     .chip { font-size: 10px; padding: .125rem .5rem; border-radius: 9999px; }
     #loading { display: none; text-align: center; padding: 1rem; color: #555; }
+    
+    /* NEW: Name Truncation & Hover Tooltips */
+    .name-label {
+      display: block;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 10px;
+      cursor: help;
+    }
+
+    [data-tooltip] {
+      position: relative;
+    }
+
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      white-space: nowrap;
+      z-index: 50;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
     .typing-dots { display: inline-flex; align-items: flex-end; gap: 3px; }
     .typing-dot { width: 4px; height: 4px; border-radius: 9999px; background: #6b7280; animation: typingBounce 0.6s infinite ease-in-out; }
     .typing-dot:nth-child(2) { animation-delay: 0.15s; }
@@ -119,7 +151,7 @@
 
     <div class="mt-8 card p-6 rounded-2xl border shadow-sm">
       <h3 class="text-lg font-semibold mb-3">Who’s Booked</h3>
-      <input id="whoBookedSearch" class="w-full rounded-xl border px-3 py-2 mb-4 text-sm" placeholder="Search by name or date..." />
+      <input id="whoBookedSearch" class="w-full rounded-xl border px-3 py-2 mb-4 text-sm" placeholder="Search by name or date (e.g., 'Steve' or 'March')..." />
       <div id="whoBookedList" class="text-sm text-gray-700"></div>
     </div>
 
@@ -175,7 +207,6 @@
       "2026-12-05","2026-12-12"
     ]);
 
-    // Haftorah titles
     const FESTIVAL_HAFTORAH = {
       "2025-12-20": "Roni VeSimchi",
       "2026-02-14": "Yehoash Melech Yehudah",
@@ -205,7 +236,6 @@
       "2026-12-12": "VaYa’as Chiram"
     };
 
-    // Festival names for display
     const FESTIVAL_NAME = {
       "2025-12-20": "Shabbos Chanukah",
       "2026-02-14": "Shabbos Shekalim",
@@ -235,7 +265,6 @@
       "2026-12-12": "Shabbos Chanukah"
     };
 
-    // Range for Hebcal lookup
     const HEB_START = "2025-01-01";
     const HEB_END = "2035-12-31"; 
 
@@ -322,7 +351,7 @@
         const res = await fetch(endpoint());
         if(!res.ok) throw new Error("HTTP "+res.status);
         const data = await res.json();
-        bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date), name: (b.name || "").trim()})).filter(b=>b.date) : [];
+        bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date), name: String(b.name || "").trim()})).filter(b=>b.date) : [];
         localStorage.setItem("haftorahBookings", JSON.stringify(bookings));
       }catch(e){
         console.error("Fetch failed:", e);
@@ -357,21 +386,22 @@
         const cell=document.createElement("button");
         cell.disabled=!selectable;
         
-        // Minor tweak here: Added 'overflow-hidden' to ensure long names don't spill out
-        // gap-0.5 brings items closer together
         cell.className="aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition overflow-hidden "+
           (selectable?"bg-white hover:bg-indigo-50 cursor-pointer":"bg-gray-50 text-gray-400");
 
         let contentHtml = "";
         
-        // 1. Logic for "Reserved" state with name
         if (taken) {
-          contentHtml = '<span class="chip bg-red-100 text-red-700">Reserved</span>';
-          if (booking.name) {
-             contentHtml += `<span class="text-[10px] leading-3 text-gray-600 font-medium truncate w-full px-1 text-center mt-0.5">${booking.name}</span>`;
-          }
+          const fullName = booking.name || "Reserved";
+          const shortName = fullName.length > 10 ? fullName.substring(0, 10) + "..." : fullName;
+          
+          contentHtml = `
+            <span class="chip bg-red-100 text-red-700">Reserved</span>
+            <span class="name-label text-gray-600 font-medium mt-0.5 px-1 text-center" data-tooltip="${fullName}">
+              ${shortName}
+            </span>
+          `;
         } 
-        // 2. Logic for Available states
         else if (selectable && isFestival) {
             contentHtml='<span class="chip bg-blue-100 text-blue-700">Festival</span>';
         }
@@ -394,28 +424,61 @@
       }
     }
 
-    function renderWhoBooked(){
+    function renderWhoBooked() {
       if (!whoBookedList) return;
+      
       const term = (whoBookedSearch && whoBookedSearch.value || "").trim().toLowerCase();
-      const sorted = bookings.slice().sort((a,b)=>a.date.localeCompare(b.date));
-      const filtered = term
-        ? sorted.filter(b=>{
-          const nice = new Date(b.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).toLowerCase();
-          const name = (b.name || "").toLowerCase();
-          return nice.includes(term) || name.includes(term);
-        })
-        : sorted;
+      
+      const today = new Date();
+      const todayStr = today.getFullYear() + '-' + 
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(today.getDate()).padStart(2, '0');
 
-      if (!filtered.length){
-        whoBookedList.textContent = "No matches found.";
+      const filtered = bookings
+        .filter(b => b.date >= todayStr) 
+        .filter(b => {
+          const niceDate = new Date(b.date + "T12:00:00Z").toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long", year: "numeric"
+          }).toLowerCase();
+          const name = (b.name || "").toLowerCase();
+          return niceDate.includes(term) || name.includes(term);
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      if (!filtered.length) {
+        whoBookedList.innerHTML = `<div class="py-4 text-center text-gray-500">No upcoming bookings found.</div>`;
         return;
       }
 
-      whoBookedList.innerHTML = filtered.map(b=>{
-        const nice = new Date(b.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-        const name = b.name ? b.name : "Booked";
-        return `<div class="mb-2"><span class="font-semibold">${nice}</span> — ${name}</div>`;
-      }).join("");
+      whoBookedList.innerHTML = `
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b text-gray-400 uppercase text-[10px] tracking-wider">
+              <th class="py-2">Date</th>
+              <th class="py-2">Name</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            ${filtered.map(b => {
+              const dateObj = new Date(b.date + "T12:00:00Z");
+              const displayDate = dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" });
+              const fullName = b.name || "Reserved";
+              const shortName = fullName.length > 10 ? fullName.substring(0, 10) + "..." : fullName;
+
+              return `
+                <tr class="hover:bg-indigo-50/30 transition-colors">
+                  <td class="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">${displayDate}</td>
+                  <td class="py-2">
+                    <span class="cursor-help text-indigo-600 inline-block" data-tooltip="${fullName}">
+                      ${shortName}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      `;
     }
 
     function getCalendarDays(year,month){
@@ -530,7 +593,6 @@
     }
     init();
 
-    // Lookup UI
     document.getElementById("lookupBtn").onclick = ()=>{
       const term=document.getElementById("lookupInput").value;
       const results=fuzzyMatch(term);
@@ -540,7 +602,6 @@
       box.innerHTML = results.map(r=>`<div class="mb-2"><span class="font-semibold">${r.title}</span> — ${new Date(r.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>`).join("");
     };
 
-    // FAQ chat
     const FAQ_ITEMS = [
       { q:"How do I reserve a Haftorah?", a:"Scroll to the calendar, pick an available date, and submit the form." },
       { q:"Bar/Bat Mitzvahs?", a:"You can reserve here; formal Bar/Bat Mitzvah bookings still go through the office." },
