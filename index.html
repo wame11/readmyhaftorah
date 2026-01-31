@@ -119,6 +119,7 @@
 
         <div class="mt-8 card p-6 rounded-2xl border shadow-sm">
             <h3 class="text-lg font-semibold mb-3">Who’s Booked</h3>
+            <input id="whoBookedSearch" class="w-full rounded-xl border px-3 py-2 mb-4 text-sm" placeholder="Search by name or date..." />
             <div id="whoBookedList" class="text-sm text-gray-700"></div>
         </div>
 
@@ -250,6 +251,7 @@
         const formBox = document.getElementById("formBox");
         const loading = document.getElementById("loading");
         const whoBookedList = document.getElementById("whoBookedList");
+        const whoBookedSearch = document.getElementById("whoBookedSearch");
 
         function endpoint(path){ const base = USE_PROXY ? (PROXY_URL + SCRIPT_URL) : SCRIPT_URL; return path ? (base + path) : base; }
         function makeDate(y,m,d){ return new Date(Date.UTC(y,m-1,d,12)); }
@@ -379,12 +381,22 @@
 
         function renderWhoBooked(){
             if (!whoBookedList) return;
-            if (!bookings.length){
-                whoBookedList.textContent = "No bookings yet.";
+            const term = (whoBookedSearch && whoBookedSearch.value || "").trim().toLowerCase();
+            const sorted = bookings.slice().sort((a,b)=>a.date.localeCompare(b.date));
+            const filtered = term
+                ? sorted.filter(b=>{
+                    const nice = new Date(b.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).toLowerCase();
+                    const name = (b.name || "").toLowerCase();
+                    return nice.includes(term) || name.includes(term);
+                  })
+                : sorted;
+
+            if (!filtered.length){
+                whoBookedList.textContent = "No matches found.";
                 return;
             }
-            const sorted = bookings.slice().sort((a,b)=>a.date.localeCompare(b.date));
-            whoBookedList.innerHTML = sorted.map(b=>{
+
+            whoBookedList.innerHTML = filtered.map(b=>{
                 const nice = new Date(b.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
                 const name = b.name ? b.name : "Booked";
                 return `<div class="mb-2"><span class="font-semibold">${nice}</span> — ${name}</div>`;
@@ -491,6 +503,10 @@
 
         document.getElementById("prevBtn").onclick=()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderCalendar(); };
         document.getElementById("nextBtn").onclick=()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderCalendar(); };
+
+        if (whoBookedSearch){
+            whoBookedSearch.addEventListener("input", renderWhoBooked);
+        }
 
         async function init(){
             await fetchHebcalRange();
