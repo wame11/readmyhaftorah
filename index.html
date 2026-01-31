@@ -117,6 +117,11 @@
             </div>
         </div>
 
+        <div class="mt-8 card p-6 rounded-2xl border shadow-sm">
+            <h3 class="text-lg font-semibold mb-3">Who’s Booked</h3>
+            <div id="whoBookedList" class="text-sm text-gray-700"></div>
+        </div>
+
         <p class="mt-4 text-xs text-gray-600">* Festival dates are only updated through the end of 2026.</p>
     </section>
 
@@ -244,6 +249,7 @@
         const monthLabel = document.getElementById("monthLabel");
         const formBox = document.getElementById("formBox");
         const loading = document.getElementById("loading");
+        const whoBookedList = document.getElementById("whoBookedList");
 
         function endpoint(path){ const base = USE_PROXY ? (PROXY_URL + SCRIPT_URL) : SCRIPT_URL; return path ? (base + path) : base; }
         function makeDate(y,m,d){ return new Date(Date.UTC(y,m-1,d,12)); }
@@ -314,7 +320,7 @@
                 const res = await fetch(endpoint());
                 if(!res.ok) throw new Error("HTTP "+res.status);
                 const data = await res.json();
-                bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date)})).filter(b=>b.date) : [];
+                bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date), name: (b.name || "").trim()})).filter(b=>b.date) : [];
                 localStorage.setItem("haftorahBookings", JSON.stringify(bookings));
             }catch(e){
                 console.error("Fetch failed:", e);
@@ -323,6 +329,7 @@
             }
             loading.style.display="none";
             renderCalendar();
+            renderWhoBooked();
             if (selected) renderForm();
         }
 
@@ -338,7 +345,8 @@
                 const cy=d.getUTCFullYear(), cm=d.getUTCMonth()+1, cd=d.getUTCDate();
                 const iso=formatISO(cy,cm,cd);
                 const thisMonth=cm===m;
-                const taken=bookings.some(b=>b.date===iso);
+                const booking=bookings.find(b=>b.date===iso);
+                const taken=!!booking;
                 const isPast=d<todayMid;
                 const isFestival = FESTIVALS_FALLBACK.has(iso);
                 const isSat = d.getUTCDay()===6;
@@ -355,7 +363,9 @@
                 else if (selectable) chipHtml='<span class="chip bg-green-100 text-green-700">Available</span>';
                 else if ((isSat||isFestival)&&!thisMonth) chipHtml='<span class="chip bg-yellow-100 text-yellow-700">Other Month</span>';
 
-                cell.innerHTML='<span class="text-base font-semibold '+(thisMonth?"text-gray-900":"text-gray-400")+'">'+cd+'</span>'+chipHtml;
+                const nameHtml = taken && booking.name ? `<span class="text-[10px] text-gray-700">${booking.name}</span>` : "";
+
+                cell.innerHTML='<span class="text-base font-semibold '+(thisMonth?"text-gray-900":"text-gray-400")+'">'+cd+'</span>'+chipHtml+nameHtml;
 
                 if (selectable){
                     cell.onclick=()=>{ selected=d; renderForm(); renderCalendar(); };
@@ -365,6 +375,20 @@
                 }
                 grid.appendChild(cell);
             }
+        }
+
+        function renderWhoBooked(){
+            if (!whoBookedList) return;
+            if (!bookings.length){
+                whoBookedList.textContent = "No bookings yet.";
+                return;
+            }
+            const sorted = bookings.slice().sort((a,b)=>a.date.localeCompare(b.date));
+            whoBookedList.innerHTML = sorted.map(b=>{
+                const nice = new Date(b.date+"T12:00:00Z").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+                const name = b.name ? b.name : "Booked";
+                return `<div class="mb-2"><span class="font-semibold">${nice}</span> — ${name}</div>`;
+            }).join("");
         }
 
         function getCalendarDays(year,month){
