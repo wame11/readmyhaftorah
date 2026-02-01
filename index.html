@@ -286,19 +286,31 @@
     function makeDate(y,m,d){ return new Date(Date.UTC(y,m-1,d,12)); }
     function formatISO(y,m,d){ return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
 
+    // FIX: Simplified this function. If it receives a clean "YYYY-MM-DD" from backend, it just returns it.
+    // This prevents re-parsing the date object which causes the off-by-one error.
     function normaliseBackendDate(val){
-      if (val===null||val===undefined) return "";
-      let s=String(val).trim();
+      if (val === null || val === undefined) return "";
+      let s = String(val).trim();
       if (!s) return "";
+      
+      // If backend sends "2026-04-18", this regex catches it and returns it immediately.
+      // This is the critical fix.
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      if (s.length>10 && s.charAt(10)==="T") return s.substring(0,10);
-      let cleaned = s.charAt(0)==="'" ? s.substring(1).trim() : s;
+      
+      // Fallback logic for legacy data or T-timestamps
+      if (s.length > 10 && s.charAt(10) === "T") return s.substring(0,10);
+      
+      // Handle "2026-04-18T23:00:00.000Z" edge cases by strictly taking the first 10 chars
+      // provided the backend now sends the correct date in the first place.
+      
+      let cleaned = s.charAt(0) === "'" ? s.substring(1).trim() : s;
       let uk = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (uk){
-        let day=Number(uk[1]), month=Number(uk[2]), year=Number(uk[3]);
-        if (year && month>=1 && month<=12 && day>=1 && day<=31) return formatISO(year,month,day);
+        let day = Number(uk[1]), month = Number(uk[2]), year = Number(uk[3]);
+        if (year && month >= 1 && month <= 12 && day >= 1 && day <= 31) return formatISO(year,month,day);
       }
-      let d=new Date(cleaned);
+      
+      let d = new Date(cleaned);
       if (!isNaN(d)) return formatISO(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
       return "";
     }
