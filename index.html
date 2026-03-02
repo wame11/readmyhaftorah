@@ -92,7 +92,7 @@
       </div>
       <div>
         <h3 class="font-semibold text-lg text-indigo-700">Bar/Bat Mitzvahs?</h3>
-        <p class="mt-1">You’re welcome to reserve, but note there is a separate Bar/Bat Mitzvah process through the office.</p>
+        <p class="mt-1">You're welcome to reserve, but note there is a separate Bar/Bat Mitzvah process through the office.</p>
       </div>
       <div>
         <h3 class="font-semibold text-lg text-indigo-700">Can I change my reservation?</h3>
@@ -103,15 +103,15 @@
         <p class="mt-1">Only the organisers.</p>
       </div>
       <div>
-        <h3 class="font-semibold text-lg text-indigo-700">What if a date says “Reserved”?</h3>
-        <p class="mt-1">It’s taken — please choose another Shabbat or Festival date.</p>
+        <h3 class="font-semibold text-lg text-indigo-700">What if a date says "Reserved"?</h3>
+        <p class="mt-1">It's taken — please choose another Shabbat or Festival date.</p>
       </div>
     </div>
   </section>
 
   <section id="lookup" class="max-w-6xl mx-auto px-4 py-16 border-t">
     <h2 class="text-2xl md:text-3xl font-bold mb-3">Find your Haftorah date</h2>
-    <p class="text-gray-700 mb-4">Type the Parasha/Haftorah name (we’ll tolerate minor spelling mistakes). Covers now through 2035.</p>
+    <p class="text-gray-700 mb-4">Type the Parasha/Haftorah name (we'll tolerate minor spelling mistakes). Covers now through 2035.</p>
     <div class="card p-4 rounded-2xl border shadow-sm space-y-4">
       <div class="flex flex-col md:flex-row gap-3">
         <input id="lookupInput" class="w-full rounded-xl border px-3 py-2" placeholder="e.g. Ki Tavo, Noach, Yitro" />
@@ -150,7 +150,7 @@
     </div>
 
     <div class="mt-8 card p-6 rounded-2xl border shadow-sm">
-      <h3 class="text-lg font-semibold mb-3">Who’s Booked</h3>
+      <h3 class="text-lg font-semibold mb-3">Who's Booked</h3>
       <input id="whoBookedSearch" class="w-full rounded-xl border px-3 py-2 mb-4 text-sm" placeholder="Search by name or date (e.g., 'Steve' or 'March')..." />
       <div id="whoBookedList" class="text-sm text-gray-700"></div>
     </div>
@@ -219,7 +219,7 @@
       "2026-04-04": "HaAtzamos HaYevayshos",
       "2026-04-08": "VaYedaber Dovid",
       "2026-04-09": "Od HaYom",
-      "2026-05-22": "Ma’aseh Merkavah",
+      "2026-05-22": "Ma'aseh Merkavah",
       "2026-05-23": "Hashem BeHeichal Kodsho",
       "2026-07-18": "Chazon Yeshayahu",
       "2026-07-23": "Asof Asifeim",
@@ -233,7 +233,7 @@
       "2026-10-03": "VaYehi KeChalos Shlomo",
       "2026-10-04": "VaYehi Acharei Mos Moshe",
       "2026-12-05": "Roni VeSimchi",
-      "2026-12-12": "VaYa’as Chiram"
+      "2026-12-12": "VaYa'as Chiram"
     };
 
     const FESTIVAL_NAME = {
@@ -286,22 +286,14 @@
     function makeDate(y,m,d){ return new Date(Date.UTC(y,m-1,d,12)); }
     function formatISO(y,m,d){ return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
 
-    // FIX: Simplified this function. If it receives a clean "YYYY-MM-DD" from backend, it just returns it.
-    // This prevents re-parsing the date object which causes the off-by-one error.
     function normaliseBackendDate(val){
       if (val === null || val === undefined) return "";
       let s = String(val).trim();
       if (!s) return "";
       
-      // If backend sends "2026-04-18", this regex catches it and returns it immediately.
-      // This is the critical fix.
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
       
-      // Fallback logic for legacy data or T-timestamps
       if (s.length > 10 && s.charAt(10) === "T") return s.substring(0,10);
-      
-      // Handle "2026-04-18T23:00:00.000Z" edge cases by strictly taking the first 10 chars
-      // provided the backend now sends the correct date in the first place.
       
       let cleaned = s.charAt(0) === "'" ? s.substring(1).trim() : s;
       let uk = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -363,7 +355,7 @@
         const res = await fetch(endpoint());
         if(!res.ok) throw new Error("HTTP "+res.status);
         const data = await res.json();
-        bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date), name: String(b.name || "").trim()})).filter(b=>b.date) : [];
+        bookings = Array.isArray(data) ? data.map(b=>({date: normaliseBackendDate(b.date), name: String(b.name || "").trim(), dedication: String(b.dedication || "").trim()})).filter(b=>b.date) : [];
         localStorage.setItem("haftorahBookings", JSON.stringify(bookings));
       }catch(e){
         console.error("Fetch failed:", e);
@@ -394,12 +386,15 @@
         const isFestival = FESTIVALS_FALLBACK.has(iso);
         const isSat = d.getUTCDay()===6;
         const selectable=(isSat || isFestival)&&thisMonth&&!taken&&!isPast;
+        const clickableReserved=taken&&thisMonth;
 
         const cell=document.createElement("button");
-        cell.disabled=!selectable;
+        cell.disabled=!(selectable||clickableReserved);
         
         cell.className="aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition overflow-hidden "+
-          (selectable?"bg-white hover:bg-indigo-50 cursor-pointer":"bg-gray-50 text-gray-400");
+          (selectable?"bg-white hover:bg-indigo-50 cursor-pointer":
+           clickableReserved?"bg-red-50 hover:bg-red-100 cursor-pointer":
+           "bg-gray-50 text-gray-400");
 
         let contentHtml = "";
         
@@ -428,7 +423,10 @@
 
         if (selectable){
           cell.onclick=()=>{ selected=d; renderForm(); renderCalendar(); };
+        } else if (clickableReserved) {
+          cell.onclick=()=>{ selected=d; renderForm(); renderCalendar(); };
         }
+        
         if (selected && formatISO(selected.getUTCFullYear(), selected.getUTCMonth()+1, selected.getUTCDate())===iso){
           cell.classList.add("ring-4","ring-indigo-400","ring-offset-2");
         }
@@ -513,6 +511,49 @@
       const nice = selected.toLocaleDateString("en-GB",{timeZone:"Europe/London",weekday:"long",day:"numeric",month:"long",year:"numeric"});
       const haftorah = findHaftorahByDate(iso);
       const festivalName = FESTIVAL_NAME[iso] || "";
+      const booking = bookings.find(b=>b.date===iso);
+      const taken = !!booking;
+
+      if (taken) {
+        formBox.innerHTML =
+          '<div class="flex items-center justify-between gap-3 mb-4">'+
+          '<h3 class="text-xl font-semibold">'+nice+'</h3>'+
+          '<button id="changeDate" class="text-sm underline text-indigo-600 hover:text-indigo-700">Close</button>'+
+          '</div>'+
+          '<div class="p-6 rounded-xl bg-red-50 border-2 border-red-200">'+
+          '<div class="text-center mb-4">'+
+          '<span class="inline-block px-4 py-2 rounded-full bg-red-100 text-red-700 font-semibold text-sm">Already Reserved</span>'+
+          '</div>'+
+          '<div class="space-y-3 text-sm">'+
+          '<div class="flex justify-between items-center py-2 border-b border-red-200">'+
+          '<span class="font-medium text-gray-600">Reserved by:</span>'+
+          '<span class="font-semibold text-gray-900">'+(booking.name || "Reserved")+'</span>'+
+          '</div>'+
+          '<div class="flex justify-between items-center py-2 border-b border-red-200">'+
+          '<span class="font-medium text-gray-600">Date:</span>'+
+          '<span class="font-semibold text-gray-900">'+nice+'</span>'+
+          '</div>'+
+          '<div class="flex justify-between items-center py-2 border-b border-red-200">'+
+          '<span class="font-medium text-gray-600">Haftorah:</span>'+
+          '<span class="font-semibold text-gray-900">'+haftorah+'</span>'+
+          '</div>'+
+          (festivalName ? 
+            '<div class="flex justify-between items-center py-2 border-b border-red-200">'+
+            '<span class="font-medium text-gray-600">Festival:</span>'+
+            '<span class="font-semibold text-gray-900">'+festivalName+'</span>'+
+            '</div>' : '')+
+          (booking.dedication ? 
+            '<div class="py-2">'+
+            '<span class="font-medium text-gray-600">Dedication:</span>'+
+            '<p class="mt-1 text-gray-900">'+booking.dedication+'</p>'+
+            '</div>' : '')+
+          '</div>'+
+          '<div class="mt-4 text-xs text-gray-600 text-center">This date is not available for booking.</div>'+
+          '</div>';
+
+        document.getElementById("changeDate").onclick=()=>{ selected=null; renderForm(); renderCalendar(); };
+        return;
+      }
 
       formBox.innerHTML =
         '<div class="flex items-center justify-between gap-3 mb-4">'+
@@ -619,7 +660,7 @@
       { q:"Bar/Bat Mitzvahs?", a:"You can reserve here; formal Bar/Bat Mitzvah bookings still go through the office." },
       { q:"Change my reservation?", a:"Message in the Haftorah WhatsApp group." },
       { q:"Who sees my details?", a:"Only the organisers." },
-      { q:"A date says 'Reserved'?", a:"It’s taken—please choose another date." }
+      { q:"A date says 'Reserved'?", a:"It's taken—please choose another date." }
     ];
     function initFaqChat(){
       const panel=document.getElementById("faqChatPanel");
